@@ -1,49 +1,69 @@
-Service-WorkHours
+# Service::WorkHours
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+Service::WorkHours is a simple service written in Perl to manage systemd
+services that should run during a specific period every day.
 
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
+systemd timers require creating units that start and stop the service, and in
+the event the host is rebooted during the service activity period, it will not
+be restarted automatically. This simple program solves this problem.
 
+## INSTALLATION
 
-INSTALLATION
+First, build and test the distribution:
 
-To install this module, run the following commands:
+    perl Makefile.PL
+    make
+    make test
+    make dist
 
-	perl Makefile.PL
-	make
-	make test
-	make install
+Install the distribution and all its dependencies using `cpanm`:
 
-SUPPORT AND DOCUMENTATION
+    cpanm Service-WorkHours-0.01.tar.gz
 
-After installing, you can find documentation for this module with the
-perldoc command.
+## USAGE
 
-    perldoc Service::WorkHours
+This module installs a `workhoursd` program which reads its configuration from
+`/etc/workhoursd`, a YAML file that specifies which services should be managed.
+Other options can be viewed using `workhoursd --help`.
 
-You can also look for information at:
+Here is an example of configuration:
 
-    RT, CPAN's request tracker (report bugs here)
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Service-WorkHours
+```yaml
+---
+services:
+    nginx:
+        start: 8:00  # Start at 8AM
+        stop: 16:00  # Stop at 4PM
+    my-service:
+        start: 11:00
+        stop: 12:00
+        ignorefailed: 1 # Ignore the systemd failed state of the service
 
-    AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/Service-WorkHours
+```
 
-    CPAN Ratings
-        http://cpanratings.perl.org/d/Service-WorkHours
+It is recommended to run `workhoursd` as a systemd service, which is enabled to
+start at boot. ***It is recommended to leave managed services disabled as this
+may cause conflicts at boot time with how `workhoursd` manages services***.
 
-    Search CPAN
-        http://search.cpan.org/dist/Service-WorkHours/
+Here is a suitable `workhoursd.service` to run this program
+as a service:
 
+```ini
+# /etc/systemd/system/workhoursd.service
+[Unit]
+Description=workhoursd daemon for managing services
+After=local-fs.target
+Requires=local-fs.target
 
-LICENSE AND COPYRIGHT
+[Service]
+# Update this if you are not doing a system-wide install using cpanm
+ExecStart=/usr/local/bin/workhoursd
+
+[Install]
+WantedBy=multi-user.target
+```
+
+## LICENSE AND COPYRIGHT
 
 Copyright (C) 2017 Vincent Tavernier
 
