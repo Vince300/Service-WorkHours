@@ -8,7 +8,8 @@ use Proc::Daemon;
 use Net::DBus;
 use Cwd qw/abs_path/;
 use YAML::XS qw/LoadFile Dump/;
-use Time::HiRes qw/gettimeofday/;
+use Getopt::Long qw/GetOptionsFromArray/;
+use List::Util qw/min/;
 
 =head1 NAME
 
@@ -57,7 +58,7 @@ sub _usage {
 }
 
 sub _str2timeofday {
-	$_[0] =~ m/^(\d{1,2}):(\d{1,2})$/
+	$_[0] =~ m/^(\d{1,2}):(\d{1,2})$/;
 	my $t = $1 * 3600 + $2 * 60;
 
 	die "Invalid time $t" if ($t < 0 || $t > (24*3600));
@@ -118,14 +119,20 @@ sub run {
 			my $unit = $manager->LoadUnit("$k.service");
 
 			if ($unit) {
+				# Get systemd unit object
+				$unit = $systemd->get_object($unit);
+				
 				my $p = $unit->FragmentPath || $unit->SourcePath;
-				say "Loaded '$k' from '$p'";
+				say STDERR "Loaded '$k' from '$p'";
+
+				my $ignorefailed = $v->{ignorefailed} // 0;
 
 				$services{$k} = { unit => $unit,
 								  startat => _str2timeofday($v->{start}),
-								  stopat => _str2timeofday($v->{end}) };
+								  stopat => _str2timeofday($v->{stop}),
+								  ignorefailed => $ignorefailed };
 			} else {
-				say "Warning: Ignoring '$k' because no matching service has been found";
+				say STDERR "Warning: Ignoring '$k' because no matching service has been found";
 			}
 		}
 
@@ -133,29 +140,38 @@ sub run {
 		while ($continue && !$reload) {
 			my $nextevent = 24*3600 + 1;
 
+			my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) =
+				localtime(time);
+			my $t = $sec + $min * 60 + $hour * 3600;
+
 			while (my ($k, $svc) = each %services) {
 				my $unit = $svc->{unit};
 
 				# Is the unit active?
-				my $active = $unit->ActiveState =~ m/active|reloading|activating/;
+				my $active = ($unit->ActiveState =~ m/^active|reloading|activating$/);
 
 				# Should the unit be active?
-				my ($t) = gettimeofday;
 				my $should = $t >= $svc->{startat} && $t < $svc->{stopat};
 
 				if ($active && !$should) {
-					say "$k: stopping service";
+					say STDERR "$k: stopping service";
 					$unit->Stop("fail")
 				} elsif (!$active && $should) {
-					if ($unit->ActiveState eq 'failed') {
-						say "$k: not starting service in failed mode";
+					if ($unit->ActiveState eq 'failed' && !$svc->{ignorefailed}) {
+						say STDERR "$k: not starting service in failed mode";
 					} else {
-						say "$k: starting service";
+						say STDERR "$k: starting service";
 						$unit->Start("fail");
 					}
+				} elsif ($active && $should) {
+					say STDERR "$k: running as expected";
+				} elsif (!$active && !$should) {
+					my $t = $svc->{startat};
+					say STDERR "$k: waiting for $t";
 				}
 
-				my ($timetostart, $timetoend) = map { $_ = $svc->{$_} - $t; $_ <= 0 ? 24*3600+$_ : $_ } qw/startat stopat/;
+				my ($timetostart, $timetoend) = map { my $a = $svc->{$_} - $t;
+													  $a <= 0 ? 24*3600+$a : $a } qw/startat stopat/;
 				$nextevent = min($nextevent, $timetostart, $timetoend);
 			}
 
