@@ -58,6 +58,7 @@ Requires=local-fs.target
 [Service]
 # Update this if you are not doing a system-wide install using cpanm
 ExecStart=/usr/local/bin/workhoursd
+ExecReload=/bin/kill -HUP $MAINPID
 
 [Install]
 WantedBy=multi-user.target
