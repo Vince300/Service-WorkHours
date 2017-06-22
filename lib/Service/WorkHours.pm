@@ -35,7 +35,8 @@ Implementation of the Service::WorkHours daemon.
 
 =item B<--daemon>
 
-Enable daemon mode.
+Enable daemon mode. Use this when you want to manually start this as a daemon,
+but don't use this option if you use systemd to start workhoursd as a service.
 
 =item B<--config>
 
