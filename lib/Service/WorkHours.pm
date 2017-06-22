@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Service::WorkHours - The great new Service::WorkHours!
+Service::WorkHours - Service for managing systemd services working hours
 
 =head1 VERSION
 
@@ -19,81 +19,23 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
-
-    use Service::WorkHours;
-
-    my $foo = Service::WorkHours->new();
-    ...
-
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+Implementation of the Service::WorkHours daemon.
 
 =head1 SUBROUTINES/METHODS
 
-=head2 function1
+=head2 run
 
 =cut
 
-sub function1 {
-}
+sub run {
+	my (@args) = @_;
 
-=head2 function2
 
-=cut
-
-sub function2 {
 }
 
 =head1 AUTHOR
 
 Vincent Tavernier, C<< <vince.tavernier at gmail.com> >>
-
-=head1 BUGS
-
-Please report any bugs or feature requests to C<bug-service-workhours at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Service-WorkHours>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
-
-
-
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc Service::WorkHours
-
-
-You can also look for information at:
-
-=over 4
-
-=item * RT: CPAN's request tracker (report bugs here)
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Service-WorkHours>
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/Service-WorkHours>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/Service-WorkHours>
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/Service-WorkHours/>
-
-=back
-
-
-=head1 ACKNOWLEDGEMENTS
-
 
 =head1 LICENSE AND COPYRIGHT
 
@@ -134,7 +76,6 @@ YOUR LOCAL LAW. UNLESS REQUIRED BY LAW, NO COPYRIGHT HOLDER OR
 CONTRIBUTOR WILL BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, OR
 CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THE PACKAGE,
 EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 =cut
 

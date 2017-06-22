@@ -11,6 +11,9 @@ WriteMakefile(
     LICENSE          => 'artistic_2',
     PL_FILES         => {},
     MIN_PERL_VERSION => '5.014',
+    EXE_FILES => [
+        'scripts/workhoursd'
+    ],
     CONFIGURE_REQUIRES => {
         'ExtUtils::MakeMaker' => '0',
     },
