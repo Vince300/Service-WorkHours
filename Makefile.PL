@@ -21,8 +21,13 @@ WriteMakefile(
         'Test::More' => '0',
     },
     PREREQ_PM => {
-        #'ABC'              => '1.6',
-        #'Foo::Bar::Module' => '5.0401',
+        'Getopt::Long' => 0,
+        'Pod::Usage' => 0,
+        'YAML::XS' => 0,
+        'Cwd' => 0,
+        'Net::DBus' => 0,
+        'Proc::Daemon' => 0,
+        'Time::HiRes' => 0
     },
     dist  => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean => { FILES => 'Service-WorkHours-*' },

@@ -4,6 +4,12 @@ use 5.014;
 use strict;
 use warnings;
 
+use Proc::Daemon;
+use Net::DBus;
+use Cwd qw/abs_path/;
+use YAML::XS qw/LoadFile Dump/;
+use Time::HiRes qw/gettimeofday/;
+
 =head1 NAME
 
 Service::WorkHours - Service for managing systemd services working hours
@@ -16,21 +22,150 @@ Version 0.01
 
 our $VERSION = '0.01';
 
-
 =head1 SYNOPSIS
 
 Implementation of the Service::WorkHours daemon.
 
-=head1 SUBROUTINES/METHODS
+    workhoursd -d --config /etc/workhoursd
 
-=head2 run
+=head1 OPTIONS
+
+=over 8
+
+=item B<--daemon>
+
+Enable daemon mode.
+
+=item B<--config>
+
+Path to the config file for service work hours specification.
+
+=item B<--help>
+
+Prints a brief help message and exits.
+
+=item B<--man>
+
+Prints the manual page and exits.
+
+=back
+
+=cut
+
+sub _usage {
+	pod2usage(@_, -input => abs_path(__FILE__));
+}
+
+sub _str2timeofday {
+	$_[0] =~ m/^(\d{1,2}):(\d{1,2})$/
+	my $t = $1 * 3600 + $2 * 60;
+
+	die "Invalid time $t" if ($t < 0 || $t > (24*3600));
+	return $t;
+}
+
+=head1 SUBROUTINES
+
+=head2 run(@args)
+
+Implements the B<workhoursd> command.
 
 =cut
 
 sub run {
-	my (@args) = @_;
+	shift;
 
+	# Parse options
+	my ($man, $help, $daemon, $config) = (0, 0, 0, '/etc/workhoursd');
+	shift; GetOptionsFromArray(\@_, 'help|?' => \$help,
+									'man' => \$man,
+									'daemon' => \$daemon,
+									'config=s' => \$config);
 
+	# Print help
+	_usage(-exitval => 1) if $help;
+	_usage(-exitval => 0, -verbose => 2) if $man;
+
+	# Switch to daemon mode if necessary
+	Proc::Daemon::Init if $daemon;
+
+	# State variables
+	my ($continue, $reload) = (1, 0);
+
+	# Setup signal handlers
+	$SIG{TERM} = sub { $continue = 0 };
+	$SIG{HUP} = sub { $reload = 1 };
+	$SIG{INT} = sub { $continue = 0 };
+
+	CONFIGLOOP:
+	while ($continue) {
+		# Load config
+		my $config = LoadFile($config)
+			or die "Could not load config file $config: $!";
+
+		# Config reloaded
+		$reload = 0;
+
+		# Access systemd
+		my $bus = Net::DBus->system;
+		my $systemd = $bus->get_service("org.freedesktop.systemd1");
+		my $manager = $systemd->get_object("/org/freedesktop/systemd1");
+
+		# Build hash of systemd services
+		my %services = ();
+
+		while (my ($k, $v) = each %{$config->{services}}) {
+			my $unit = $manager->LoadUnit("$k.service");
+
+			if ($unit) {
+				my $p = $unit->FragmentPath || $unit->SourcePath;
+				say "Loaded '$k' from '$p'";
+
+				$services{$k} = { unit => $unit,
+								  startat => _str2timeofday($v->{start}),
+								  stopat => _str2timeofday($v->{end}) };
+			} else {
+				say "Warning: Ignoring '$k' because no matching service has been found";
+			}
+		}
+
+		RUNLOOP:
+		while ($continue && !$reload) {
+			my $nextevent = 24*3600 + 1;
+
+			while (my ($k, $svc) = each %services) {
+				my $unit = $svc->{unit};
+
+				# Is the unit active?
+				my $active = $unit->ActiveState =~ m/active|reloading|activating/;
+
+				# Should the unit be active?
+				my ($t) = gettimeofday;
+				my $should = $t >= $svc->{startat} && $t < $svc->{stopat};
+
+				if ($active && !$should) {
+					say "$k: stopping service";
+					$unit->Stop("fail")
+				} elsif (!$active && $should) {
+					if ($unit->ActiveState eq 'failed') {
+						say "$k: not starting service in failed mode";
+					} else {
+						say "$k: starting service";
+						$unit->Start("fail");
+					}
+				}
+
+				my ($timetostart, $timetoend) = map { $_ = $svc->{$_} - $t; $_ <= 0 ? 24*3600+$_ : $_ } qw/startat stopat/;
+				$nextevent = min($nextevent, $timetostart, $timetoend);
+			}
+
+			if ($nextevent == 24*3600+1) {
+				sleep;
+			} else {
+				sleep $nextevent;
+			}
+		}
+	}
 }
 
 =head1 AUTHOR
