@@ -5,11 +5,12 @@ use strict;
 use warnings;
 
 use Proc::Daemon;
-use Net::DBus;
 use Cwd qw/abs_path/;
-use YAML::XS qw/LoadFile Dump/;
 use Getopt::Long qw/GetOptionsFromArray/;
 use List::Util qw/min/;
+
+require Service::WorkHours::Config;
+require Service::WorkHours::Systemd;
 
 =head1 NAME
 
@@ -58,14 +59,6 @@ sub _usage {
 	pod2usage(@_, -input => abs_path(__FILE__));
 }
 
-sub _str2timeofday {
-	$_[0] =~ m/^(\d{1,2}):(\d{1,2})$/;
-	my $t = $1 * 3600 + $2 * 60;
-
-	die "Invalid time $t" if ($t < 0 || $t > (24*3600));
-	return $t;
-}
-
 =head1 SUBROUTINES
 
 =head2 run(@args)
@@ -78,11 +71,11 @@ sub run {
 	shift;
 
 	# Parse options
-	my ($man, $help, $daemon, $config) = (0, 0, 0, '/etc/workhoursd');
+	my ($man, $help, $daemon, $configfile) = (0, 0, 0, '/etc/workhoursd');
 	shift; GetOptionsFromArray(\@_, 'help|?' => \$help,
 									'man' => \$man,
 									'daemon' => \$daemon,
-									'config=s' => \$config);
+									'config=s' => \$configfile);
 
 	# Print help
 	_usage(-exitval => 1) if $help;
@@ -99,43 +92,17 @@ sub run {
 	$SIG{HUP} = sub { $reload = 1 };
 	$SIG{INT} = sub { $continue = 0 };
 
+	# Allocate systemd wrapper
+	my $systemd = Service::WorkHours::Systemd->new;
+
 	CONFIGLOOP:
 	while ($continue) {
 		# Load config
-		my $config = LoadFile($config)
-			or die "Could not load config file $config: $!";
+		my $config = Service::WorkHours::Config->new(file => $configfile,
+																								 systemd => $systemd);
 
 		# Config reloaded
 		$reload = 0;
-
-		# Access systemd
-		my $bus = Net::DBus->system;
-		my $systemd = $bus->get_service("org.freedesktop.systemd1");
-		my $manager = $systemd->get_object("/org/freedesktop/systemd1");
-
-		# Build hash of systemd services
-		my %services = ();
-
-		while (my ($k, $v) = each %{$config->{services}}) {
-			my $unit = $manager->LoadUnit("$k.service");
-
-			if ($unit) {
-				# Get systemd unit object
-				$unit = $systemd->get_object($unit);
-				
-				my $p = $unit->FragmentPath || $unit->SourcePath;
-				say STDERR "Loaded '$k' from '$p'";
-
-				my $ignorefailed = $v->{ignorefailed} // 0;
-
-				$services{$k} = { unit => $unit,
-								  startat => _str2timeofday($v->{start}),
-								  stopat => _str2timeofday($v->{stop}),
-								  ignorefailed => $ignorefailed };
-			} else {
-				say STDERR "Warning: Ignoring '$k' because no matching service has been found";
-			}
-		}
 
 		RUNLOOP:
 		while ($continue && !$reload) {
@@ -145,7 +112,7 @@ sub run {
 				localtime(time);
 			my $t = $sec + $min * 60 + $hour * 3600;
 
-			while (my ($k, $svc) = each %services) {
+			while (my ($k, $svc) = each %{$config->services}) {
 				my $unit = $svc->{unit};
 
 				# Is the unit active?
