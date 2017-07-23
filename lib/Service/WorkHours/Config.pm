@@ -67,16 +67,24 @@ sub new {
     my $unit = $opts{wrapper}->get_unit("$k.service");
 
     if ($unit) {
-      # Unit has been found, register service
-      $self->{services}->{$k} = {
+			my $svc = {
         name => $k,
         unit => $unit,
         startat => _str2timeofday($v->{start}),
         stopat => _str2timeofday($v->{stop}),
         ignorefailed => $v->{ignorefailed} // 0
       };
+
+			# Check start and stop date
+			if ($svc->{startat} >= $svc->{stopat}) {
+				carp "'$k' is set to stop before it starts, ignoring.";
+				next
+			}
+
+      # Unit has been found and is valid, register service
+      $self->{services}->{$k} = $svc;
     } else {
-      carp "Ignoring '$k' because no matching service has been found";
+      carp "Ignoring '$k' because no matching service has been found.";
     }
   }
 
