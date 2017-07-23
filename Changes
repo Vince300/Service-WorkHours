@@ -1,8 +1,10 @@
 Revision history for Service-WorkHours
 
-0.02    Date/time
+0.02    Sun Jul 23 14:03:15 2017 +0200
         Refactored code.
         Added tests.
+        Added support for includes.
+
 
 0.01    Thu Jun 22 21:17:19 2017 +0200
         Initial version.
