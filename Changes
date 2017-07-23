@@ -1,5 +1,8 @@
 Revision history for Service-WorkHours
 
-0.01    Date/time
-        First version, released on an unsuspecting world.
+0.02    Date/time
+        Refactored code.
+        Added tests.
 
+0.01    Thu Jun 22 21:17:19 2017 +0200
+        Initial version.

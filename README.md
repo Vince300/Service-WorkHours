@@ -18,7 +18,7 @@ First, build and test the distribution:
 
 Install the distribution and all its dependencies using `cpanm`:
 
-    cpanm Service-WorkHours-0.01.tar.gz
+    cpanm Service-WorkHours-0.02.tar.gz
 
 ## USAGE
 
@@ -103,4 +103,3 @@ YOUR LOCAL LAW. UNLESS REQUIRED BY LAW, NO COPYRIGHT HOLDER OR
 CONTRIBUTOR WILL BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, OR
 CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THE PACKAGE,
 EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
