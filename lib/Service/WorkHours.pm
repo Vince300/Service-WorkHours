@@ -28,7 +28,7 @@ our $VERSION = '0.02';
 
 Implementation of the Service::WorkHours daemon.
 
-    workhoursd -d --config /etc/workhoursd
+	workhoursd -d --config /etc/workhoursd
 
 =head1 OPTIONS
 
@@ -99,7 +99,7 @@ sub run {
 	while ($continue) {
 		# Load config
 		my $config = Service::WorkHours::Config->new(file => $configfile,
-																								 systemd => $systemd);
+													 systemd => $systemd);
 
 		# Config reloaded
 		$reload = 0;
@@ -139,7 +139,7 @@ sub run {
 				}
 
 				my ($timetostart, $timetoend) = map { my $a = $svc->{$_} - $t;
-													  $a <= 0 ? 24*3600+$a : $a } qw/startat stopat/;
+														$a <= 0 ? 24*3600+$a : $a } qw/startat stopat/;
 				$nextevent = min($nextevent, $timetostart, $timetoend);
 			}
 

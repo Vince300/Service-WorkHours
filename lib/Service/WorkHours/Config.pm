@@ -47,33 +47,33 @@ instance representing this configuration.
 =cut
 
 sub new {
-  my ($class, %opts) = @_;
+	my ($class, %opts) = @_;
 
-  croak "file must be specified"
-    unless $opts{file};
+	croak "file must be specified"
+		unless $opts{file};
 
-  croak "no systemd wrapper provided"
-    unless $opts{systemd};
+	croak "no systemd wrapper provided"
+		unless $opts{systemd};
 
-  my $self = {
-    services => {}
-  };
+	my $self = {
+		services => {}
+	};
 
-  my $config = YAML::LoadFile($opts{file})
-    or croak "cannot config file $opts{file}: $!";
+	my $config = YAML::LoadFile($opts{file})
+		or croak "cannot config file $opts{file}: $!";
 
-  while (my ($k, $v) = each %{$config->{services}}) {
-    # Try to load the unit from systemd
-    my $unit = $opts{wrapper}->get_unit("$k.service");
+	while (my ($k, $v) = each %{$config->{services}}) {
+		# Try to load the unit from systemd
+		my $unit = $opts{wrapper}->get_unit("$k.service");
 
-    if ($unit) {
+		if ($unit) {
 			my $svc = {
-        name => $k,
-        unit => $unit,
-        startat => _str2timeofday($v->{start}),
-        stopat => _str2timeofday($v->{stop}),
-        ignorefailed => $v->{ignorefailed} // 0
-      };
+				name => $k,
+				unit => $unit,
+				startat => _str2timeofday($v->{start}),
+				stopat => _str2timeofday($v->{stop}),
+				ignorefailed => $v->{ignorefailed} // 0
+			};
 
 			# Check start and stop date
 			if ($svc->{startat} >= $svc->{stopat}) {
@@ -81,14 +81,14 @@ sub new {
 				next
 			}
 
-      # Unit has been found and is valid, register service
-      $self->{services}->{$k} = $svc;
-    } else {
-      carp "Ignoring '$k' because no matching service has been found.";
-    }
-  }
+			# Unit has been found and is valid, register service
+			$self->{services}->{$k} = $svc;
+		} else {
+			carp "Ignoring '$k' because no matching service has been found.";
+		}
+	}
 
-  bless $self, $class;
+	bless $self, $class;
 }
 
 =head2 services()
@@ -98,8 +98,8 @@ Returns the services represented by this configuration instance.
 =cut
 
 sub services {
-  my ($self) = @_;
-  $self->{services}
+	my ($self) = @_;
+	$self->{services}
 }
 
 =head1 AUTHOR
