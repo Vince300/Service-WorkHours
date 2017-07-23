@@ -5,6 +5,9 @@ use strict;
 use warnings;
 use Carp;
 
+use File::Basename qw/dirname/;
+use File::Glob ':bsd_glob';
+use File::Spec::Functions qw/catfile file_name_is_absolute/;
 use YAML;
 
 =head1 NAME
@@ -55,38 +58,70 @@ sub new {
 	croak "no systemd wrapper provided"
 		unless $opts{systemd};
 
+	# Default to includes enabled
+	$opts{includes} //= 1;
+
 	my $self = {
 		services => {}
 	};
 
-	my $config = YAML::LoadFile($opts{file})
-		or croak "cannot config file $opts{file}: $!";
+	my @files = ref $opts{file} eq 'ARRAY' ?
+	 			@{$opts{file}} : ($opts{file});
+	my $loaded = 0;
 
-	while (my ($k, $v) = each %{$config->{services}}) {
-		# Try to load the unit from systemd
-		my $unit = $opts{wrapper}->get_unit("$k.service");
+	while (my $configfile = shift @files) {
+		# Try to load config or warn
+		my $config = YAML::LoadFile($configfile)
+			or (carp "cannot config file $configfile: $!" and next);
+		my $dir = dirname($configfile);
 
-		if ($unit) {
-			my $svc = {
-				name => $k,
-				unit => $unit,
-				startat => _str2timeofday($v->{start}),
-				stopat => _str2timeofday($v->{stop}),
-				ignorefailed => $v->{ignorefailed} // 0
-			};
+		while (my ($k, $v) = each %{$config->{services}}) {
+			# Try to load the unit from systemd
+			my $unit = defined $self->{services}->{$k} ?
+						$self->{services}->{$k}->{unit} : # overriding, reuse unit
+			 			$opts{wrapper}->get_unit("$k.service");
 
-			# Check start and stop date
-			if ($svc->{startat} >= $svc->{stopat}) {
-				carp "'$k' is set to stop before it starts, ignoring.";
-				next
+			if ($unit) {
+				my $svc = {
+					name => $k,
+					unit => $unit,
+					startat => _str2timeofday($v->{start}),
+					stopat => _str2timeofday($v->{stop}),
+					ignorefailed => $v->{ignorefailed} // 0
+				};
+
+				# Check start and stop date
+				if ($svc->{startat} >= $svc->{stopat}) {
+					carp "'$k' is set to stop before it starts, ignoring.";
+					next
+				}
+
+				# Unit has been found and is valid, register service
+				$self->{services}->{$k} = $svc;
+			} else {
+				carp "'$k' has no matching service unit, ignoring.";
 			}
-
-			# Unit has been found and is valid, register service
-			$self->{services}->{$k} = $svc;
-		} else {
-			carp "Ignoring '$k' because no matching service has been found.";
 		}
+
+		# Process includes, unless disabled
+		if ($opts{includes}) {
+			if (ref $config->{include} eq 'ARRAY') {
+				for my $inc (@{$config->{include}}) {
+					# Each include can be a glob, which can itself be relative
+					# to the current configuration file
+					$inc = catfile($dir, $inc) unless
+						file_name_is_absolute($inc);
+
+					push @files, bsd_glob($inc);
+				}
+			}
+		}
+
+		$loaded++;
 	}
+
+	# Fail if no files could be loaded
+	croak "could not load any config files" unless $loaded;
 
 	bless $self, $class;
 }
