@@ -23,7 +23,7 @@ L<Systemd::WorkHours::Systemd>).
 	use Service::WorkHours::Config;
 	use Service::WorkHours::Systemd;
 	my $config = Service::WorkHours::Config->new(
-		file => '/etc/workhoursd',
+		file => '/etc/workhoursd/main.yml',
 		systemd => Service::WorkHours::Systemd->new
 	);
 	say keys %{$config->services};

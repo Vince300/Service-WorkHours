@@ -23,8 +23,8 @@ Install the distribution and all its dependencies using `cpanm`:
 ## USAGE
 
 This module installs a `workhoursd` program which reads its configuration from
-`/etc/workhoursd`, a YAML file that specifies which services should be managed.
-Other options can be viewed using `workhoursd --help`.
+`/etc/workhoursd/main.yml`, a YAML file that specifies which services should be
+managed. Other options can be viewed using `workhoursd --help`.
 
 Here is an example of configuration:
 
@@ -62,6 +62,32 @@ ExecReload=/bin/kill -HUP $MAINPID
 
 [Install]
 WantedBy=multi-user.target
+```
+
+More modular configurations can be created using the include feature. Here is
+the same example as before, using includes. Note that files included after
+previous files override the service definitions from these previous files.
+
+```yaml
+# /etc/workhoursd/main.yml
+---
+include:
+    - conf.d/*.yml
+
+# /etc/workhoursd/conf.d/nginx.yml
+---
+services:
+    nginx:
+        start: 8:00  # Start at 8AM
+        stop: 16:00  # Stop at 4PM
+
+# /etc/workhoursd/conf.d/my-service.yml
+---
+services:
+    my-service:
+        start: 11:00
+        stop: 12:00
+        ignorefailed: 1 # Ignore the systemd failed state of the service
 ```
 
 ## LICENSE AND COPYRIGHT

@@ -28,7 +28,7 @@ our $VERSION = '0.02';
 
 Implementation of the Service::WorkHours daemon.
 
-	workhoursd -d --config /etc/workhoursd
+	workhoursd -d --config /etc/workhoursd/main.yml
 
 =head1 OPTIONS
 
@@ -71,7 +71,7 @@ sub run {
 	shift;
 
 	# Parse options
-	my ($man, $help, $daemon, $configfile) = (0, 0, 0, '/etc/workhoursd');
+	my ($man, $help, $daemon, $configfile) = (0, 0, 0, '/etc/workhoursd/main.yml');
 	shift; GetOptionsFromArray(\@_, 'help|?' => \$help,
 									'man' => \$man,
 									'daemon' => \$daemon,
