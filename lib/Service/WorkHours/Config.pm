@@ -24,7 +24,7 @@ L<Systemd::WorkHours::Systemd>).
 	use Service::WorkHours::Systemd;
 	my $config = Service::WorkHours::Config->new(
 		file => '/etc/workhoursd',
-		wrapper => Service::WorkHours::Systemd->new
+		systemd => Service::WorkHours::Systemd->new
 	);
 	say keys %{$config->services};
 
@@ -71,15 +71,19 @@ sub new {
 
 	while (my $configfile = shift @files) {
 		# Try to load config or warn
-		my $config = YAML::LoadFile($configfile)
-			or (carp "cannot config file $configfile: $!" and next);
+		my $config = eval { YAML::LoadFile($configfile) // {} };
+		if ($@) {
+			carp "cannot load config file $configfile: $@";
+			next
+		};
+
 		my $dir = dirname($configfile);
 
-		while (my ($k, $v) = each %{$config->{services}}) {
+		while (my ($k, $v) = each %{$config->{services} // {}}) {
 			# Try to load the unit from systemd
 			my $unit = defined $self->{services}->{$k} ?
 						$self->{services}->{$k}->{unit} : # overriding, reuse unit
-			 			$opts{wrapper}->get_unit("$k.service");
+			 			$opts{systemd}->get_unit("$k.service");
 
 			if ($unit) {
 				my $svc = {

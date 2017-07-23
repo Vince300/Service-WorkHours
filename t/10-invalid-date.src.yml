@@ -1,0 +1,5 @@
+---
+services:
+  nginx:
+    start: 16:00
+    stop: 08:00

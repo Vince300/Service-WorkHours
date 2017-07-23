@@ -20,7 +20,9 @@ WriteMakefile(
 	BUILD_REQUIRES => {
 		'Test::More' => '0',
 		'Test::CheckManifest' => '0.9',
-		'IO::All' => '0'
+		'Test::Exception' => '0',
+		'IO::All' => '0',
+		'Test::Deep' => '0'
 	},
 	PREREQ_PM => {
 		'Cwd' => 0,
@@ -32,7 +34,7 @@ WriteMakefile(
 		'Net::DBus' => 0,
 		'Pod::Usage' => 0,
 		'Proc::Daemon' => 0,
-		'YAML::XS' => 0
+		'YAML' => 0
 	},
 	dist  => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
 	clean => { FILES => 'Service-WorkHours-*' },

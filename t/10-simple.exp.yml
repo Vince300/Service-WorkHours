@@ -1,0 +1,13 @@
+---
+nginx:
+  name: nginx
+  unit: 1
+  startat: 28800
+  stopat: 57600
+  ignorefailed: 0
+apache:
+  name: apache
+  unit: 1
+  startat: 57600
+  stopat: 79200
+  ignorefailed: 1

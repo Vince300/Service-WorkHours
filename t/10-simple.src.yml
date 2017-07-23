@@ -1,0 +1,9 @@
+---
+services:
+  nginx:
+    start: 08:00
+    stop: 16:00
+  apache:
+    start: 16:00
+    stop: 22:00
+    ignorefailed: 1
