@@ -19,6 +19,8 @@ WriteMakefile(
     },
     BUILD_REQUIRES => {
         'Test::More' => '0',
+        'Test::CheckManifest' => '0.9',
+        'IO::All' => '0'
     },
     PREREQ_PM => {
         'Getopt::Long' => 0,
